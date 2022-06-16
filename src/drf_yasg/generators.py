@@ -5,6 +5,7 @@ import urllib.parse as urlparse
 from collections import OrderedDict, defaultdict
 
 import uritemplate
+from django.conf import settings
 from django.urls import URLPattern, URLResolver
 from rest_framework import versioning
 from rest_framework.schemas import SchemaGenerator
@@ -300,6 +301,14 @@ class OpenAPISchemaGenerator(object):
             field_name = 'id'
         return path.replace('{pk}', '{%s}' % field_name)
 
+    def trailing_slash_path(self, path):
+        """Remove trailing slash according to settings.APPEND_SLASH
+
+        :param str path: the path
+        :rtype: str
+        """
+        return path if settings.APPEND_SLASH else path.rstrip('/')
+
     def get_endpoints(self, request):
         """Iterate over all the registered endpoints in the API and return a fake view with the right parameters.
 
@@ -316,6 +325,7 @@ class OpenAPISchemaGenerator(object):
         for path, method, callback in endpoints:
             view = self.create_view(callback, method, request)
             path = self.coerce_path(path, view)
+            path = self.trailing_slash_path(path)
             view_paths[path].append((method, view))
             view_cls[path] = callback.cls
         return {path: (view_cls[path], methods) for path, methods in view_paths.items()}
